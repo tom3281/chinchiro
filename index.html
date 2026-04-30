@@ -1618,14 +1618,17 @@ function calcRoundDrinks() {
   // pick a single loser from those at minRank (random tiebreak)
   const losers = ranked.filter(r => r.rank === minRank);
   const loser = losers[Math.floor(Math.random() * losers.length)];
-  drinks[loser.playerIdx] = stake;
+  const isHifumi = loser.result.type === 'hifumi';
+  const loserDrinks = isHifumi ? stake * 2 : stake;
+  drinks[loser.playerIdx] = loserDrinks;
   let loserReason;
-  if (loser.result.type === 'hifumi') loserReason = 'ヒフミ';
+  if (isHifumi) loserReason = 'ヒフミ';
   else if (loser.result.type === 'menashi') loserReason = '目なし';
   else loserReason = `${loser.result.value}の目（最弱）`;
+  const hifumiTag = isHifumi ? '（ヒフミ×2）' : '';
   notes[loser.playerIdx] = stakeLabel
-    ? `${loserReason} → ${stakeLabel}に負け ${stake}杯`
-    : `${loserReason} ${stake}杯`;
+    ? `${loserReason} → ${stakeLabel}に負け ${loserDrinks}杯${hifumiTag}`
+    : `${loserReason} ${loserDrinks}杯${hifumiTag}`;
 
   // mark winners — anyone tied at maxRank
   for (const r of ranked) {
@@ -1756,7 +1759,7 @@ function showRules() {
       <dd><b>シゴロ</b>（4-5-6）… 最弱は <b>2杯</b></dd>
       <dd><b>1〜6の目</b>（同じ2つ＋他1つ）… 数字大きいほど強い。最弱は <b>1杯</b></dd>
       <dd><b>目なし</b>… ハズレ扱い、これより弱いのは…</dd>
-      <dd><b>ヒフミ</b>（1-2-3）… 最弱の役。ほぼ確定で飲み</dd>
+      <dd><b>ヒフミ</b>（1-2-3）… 最弱の役。ほぼ確定で飲み、しかも<b>飲み杯数2倍</b></dd>
     </dl>
   `;
   showModal('ルール', html, null);

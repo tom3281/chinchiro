@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#2a1810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>チンチロ — 飲み</title>
+<style>
+:root {
+  --gold: #f0c850;
+  --gold-soft: #d4a850;
+  --cream: #fff5dc;
+  --cream-dim: #d8cba8;
+  --red: #e04438;
+  --shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+[hidden] { display: none !important; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Yu Gothic UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background:
+    radial-gradient(ellipse at 50% 25%, #8a5028 0%, #5a3018 55%, #2c180c 100%);
+  color: var(--cream);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  position: relative;
+  letter-spacing: 0.02em;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(92deg,
+      transparent 0, transparent 3px,
+      rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px),
+    repeating-linear-gradient(0deg,
+      transparent 0, transparent 90px,
+      rgba(255,200,150,0.04) 90px, rgba(255,200,150,0.04) 91px,
+      transparent 91px, transparent 180px,
+      rgba(0,0,0,0.06) 180px, rgba(0,0,0,0.06) 181px);
+  opacity: 0.4;
+  z-index: 0;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%);
+  z-index: 0;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+.screen.active { display: flex; }
+
+/* === SETUP === */
+#screen-setup {
+  padding: 28px 22px 22px;
+  overflow-y: auto;
+}
+.title-block { text-align: center; margin-bottom: 24px; }
+.title {
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.6), 0 0 24px rgba(240,200,80,0.25);
+  margin-bottom: 4px;
+}
+.subtitle {
+  font-size: 12px;
+  color: var(--gold-soft);
+  letter-spacing: 0.3em;
+  opacity: 0.85;
+}
+
+.setup-form {
+  background: linear-gradient(180deg, rgba(80,46,28,0.75), rgba(58,32,18,0.85));
+  border: 1px solid rgba(240,200,80,0.35);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,220,160,0.15);
+}
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(240,200,80,0.12);
+}
+.setup-row:last-child { border-bottom: none; }
+.setup-row > label {
+  font-size: 14px;
+  color: var(--cream);
+  font-weight: 600;
+}
+
+.counter { display: flex; align-items: center; gap: 10px; }
+.counter button {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(240,200,80,0.55);
+  background: linear-gradient(180deg, #6e4228, #4a2c1c);
+  color: var(--cream);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer; transition: transform 0.1s;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.4);
+}
+.counter button:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.4); }
+.counter > span {
+  display: inline-block; min-width: 50px; text-align: center;
+  font-size: 18px; font-weight: 700; color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.toggle { position: relative; width: 50px; height: 28px; }
+.toggle input { display: none; }
+.toggle label {
+  position: absolute; inset: 0;
+  background: #4a2c1c; border-radius: 14px; cursor: pointer;
+  border: 1px solid rgba(240,200,80,0.35); transition: background 0.2s;
+}
+.toggle label::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; background: var(--cream-dim);
+  border-radius: 50%; transition: transform 0.18s, background 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.toggle input:checked + label { background: linear-gradient(90deg, #a05030, var(--gold-soft)); }
+.toggle input:checked + label::after { transform: translateX(22px); background: var(--cream); }
+
+.player-name-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+}
+.player-name-row .num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--gold), var(--gold-soft));
+  color: #2a1810; font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.player-name-row input {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(240,200,80,0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--cream);
+  font-size: 15px;
+  font-family: inherit;
+}
+.player-name-row input:focus { outline: none; border-color: var(--gold); }
+
+.btn-primary, .btn-secondary, .btn-link {
+  font-family: inherit; font-weight: 800;
+  letter-spacing: 0.12em; cursor: pointer;
+  transition: transform 0.08s, filter 0.15s; border: none;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #e85048 0%, #b03028 60%, #8a2018 100%);
+  color: #fff;
+  border: 1px solid rgba(255,200,160,0.5);
+  border-radius: 10px;
+  padding: 14px 22px;
+  font-size: 16px;
+  box-shadow:
+    0 4px 0 rgba(0,0,0,0.5),
+    0 6px 20px rgba(220,60,40,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.45);
+}
+.btn-primary.big {
+  padding: 17px 28px;
+  font-size: 18px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+.btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.5), 0 3px 8px rgba(220,60,40,0.35), inset 0 1px 0 rgba(255,255,255,0.2); }
+.btn-primary:disabled { filter: grayscale(0.5) brightness(0.6); cursor: not-allowed; }
+.btn-secondary {
+  background: linear-gradient(180deg, #6e4228, #4a2c1c);
+  color: var(--cream);
+  border: 1px solid rgba(240,200,80,0.45);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 14px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,160,0.15);
+}
+.btn-secondary:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.4); }
+.btn-link {
+  background: transparent;
+  color: var(--gold-soft);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 8px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* === GAME === */
+#screen-game { padding: 0; }
+
+.game-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 8px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(240,200,80,0.18);
+  background: linear-gradient(180deg, rgba(0,0,0,0.4), transparent);
+}
+.round-label { color: var(--gold); font-weight: 700; letter-spacing: 0.15em; }
+.round-label span { font-size: 17px; padding: 0 2px; }
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid rgba(240,200,80,0.4);
+  color: var(--gold-soft);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px; font-weight: 800;
+}
+
+.roster {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 12px 4px;
+  justify-content: center;
+}
+.roster-item {
+  flex: 1 1 0; min-width: 0;
+  background: linear-gradient(180deg, rgba(80,46,28,0.85), rgba(50,28,18,0.9));
+  border: 1px solid rgba(240,200,80,0.35);
+  border-radius: 10px;
+  padding: 6px;
+  text-align: center;
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.roster-item.active {
+  border-color: #ff8060;
+  background: linear-gradient(180deg, rgba(140,90,40,0.95), rgba(90,55,25,0.95));
+  box-shadow: 0 0 16px rgba(255,120,80,0.6);
+}
+.roster-item.winner {
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(240,200,80,0.6);
+}
+.roster-item .name {
+  font-size: 11px; font-weight: 700; color: var(--cream);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.roster-item .drinks {
+  font-size: 14px; font-weight: 800; color: var(--gold);
+  font-variant-numeric: tabular-nums; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+}
+.roster-item .drinks::after { content: "杯"; font-size: 9px; opacity: 0.7; }
+.roster-item.active::before {
+  content: "投";
+  position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+  background: #ff8060; color: #2a1810;
+  font-size: 10px; font-weight: 900;
+  padding: 1px 6px; border-radius: 6px;
+  letter-spacing: 0.1em;
+}
+
+/* 3D stage */
+.three-stage {
+  flex: 1;
+  position: relative;
+  min-height: 280px;
+  width: 100%;
+}
+#three-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.roll-label {
+  position: absolute;
+  bottom: 10px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px; font-weight: 800;
+  color: var(--cream);
+  background: rgba(0,0,0,0.7);
+  padding: 4px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(240,200,80,0.45);
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.12em;
+  opacity: 0;
+  transition: opacity 0.25s;
+  z-index: 2;
+}
+.roll-label.show { opacity: 1; }
+
+.turn-info {
+  text-align: center;
+  padding: 6px 16px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.3));
+}
+.turn-name-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.turn-name { font-size: 20px; font-weight: 800; color: var(--cream); }
+.role-badge {
+  display: inline-block;
+  font-size: 11px; font-weight: 800;
+  padding: 2px 8px; border-radius: 4px;
+  letter-spacing: 0.12em;
+}
+.role-badge.oya { background: var(--gold); color: #2a1810; }
+.role-badge.ko {
+  background: rgba(255,255,255,0.12);
+  color: var(--cream);
+  border: 1px solid var(--cream-dim);
+}
+.turn-meta {
+  display: flex; justify-content: center; gap: 16px;
+  margin-top: 4px;
+  font-size: 12px; color: var(--cream-dim);
+}
+.turn-meta strong {
+  color: var(--gold);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-bar {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 16px 8px;
+}
+.action-bar .btn-primary { margin-bottom: 0; }
+
+.log-wrap { padding: 0 12px 12px; }
+.log {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(240,200,80,0.18);
+  border-radius: 8px;
+  padding: 6px 10px;
+  height: 60px;
+  overflow-y: auto;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--cream-dim);
+}
+.log .entry {
+  border-bottom: 1px dashed rgba(240,200,80,0.1);
+  padding: 1px 0;
+}
+.log .entry:last-child { border-bottom: none; }
+.log .entry.win { color: #ffe28a; }
+.log .entry.lose { color: #ff8c80; }
+.log .entry.yaku { color: var(--gold); font-weight: 700; }
+
+/* === END === */
+#screen-end {
+  padding: 28px 22px;
+  text-align: center;
+  overflow-y: auto;
+}
+.end-results {
+  background: linear-gradient(180deg, rgba(80,46,28,0.85), rgba(50,28,18,0.9));
+  border: 1px solid rgba(240,200,80,0.4);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 20px 0;
+  box-shadow: var(--shadow);
+}
+.end-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(240,200,80,0.18);
+  font-size: 15px;
+}
+.end-row:last-child { border-bottom: none; }
+.end-row .rank-badge {
+  display: inline-block;
+  width: 28px; height: 28px; line-height: 28px;
+  border-radius: 50%; text-align: center;
+  font-weight: 800; font-size: 14px; margin-right: 10px;
+  background: rgba(255,255,255,0.08);
+  color: var(--cream);
+}
+.end-row.first .rank-badge { background: var(--gold); color: #2a1810; }
+.end-row.last .rank-badge { background: var(--red); color: #fff; }
+.end-row .name { flex: 1; text-align: left; font-weight: 700; }
+.end-row .chips {
+  font-weight: 800; color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* === OVERLAYS === */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.18s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.trans-card {
+  text-align: center;
+  padding: 20px 30px;
+  cursor: pointer;
+}
+.trans-name {
+  font-size: 36px; font-weight: 900;
+  color: var(--cream);
+  margin-bottom: 6px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+.trans-role {
+  font-size: 16px; font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  margin-bottom: 16px;
+}
+.trans-hint {
+  font-size: 13px; color: var(--cream-dim);
+  letter-spacing: 0.15em;
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.yaku-overlay {
+  background: rgba(0,0,0,0.5);
+  pointer-events: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.yaku-text {
+  font-size: clamp(56px, 16vw, 110px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffd24a;
+  text-shadow:
+    0 0 28px rgba(255,140,40,0.9),
+    0 0 50px rgba(255,80,30,0.7),
+    3px 3px 0 #5c0c08,
+    -2px -2px 0 #5c0c08;
+  animation: yakuPop 1.6s cubic-bezier(0.2, 1.5, 0.4, 1) forwards;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+.yaku-text.bad {
+  color: #ff6c66;
+  text-shadow:
+    0 0 28px rgba(255,40,30,0.9),
+    0 0 50px rgba(120,0,0,0.7),
+    3px 3px 0 #1c0202;
+}
+.yaku-text.menashi {
+  color: var(--cream-dim);
+  text-shadow: 0 0 20px rgba(0,0,0,0.7), 3px 3px 0 #000;
+  font-size: clamp(40px, 11vw, 78px);
+}
+@keyframes yakuPop {
+  0% { transform: scale(0.2) rotate(-12deg); opacity: 0; }
+  20% { transform: scale(1.25) rotate(2deg); opacity: 1; }
+  50% { transform: scale(1) rotate(-1deg); opacity: 1; }
+  85% { transform: scale(1) rotate(0); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+.yaku-sub {
+  font-size: clamp(16px, 4vw, 22px);
+  font-weight: 800;
+  color: var(--cream);
+  letter-spacing: 0.2em;
+  opacity: 0;
+  animation: subFade 1.6s ease-out forwards;
+  animation-delay: 0.25s;
+}
+@keyframes subFade {
+  0% { opacity: 0; transform: translateY(10px); }
+  20%, 80% { opacity: 0.95; transform: translateY(0); }
+  100% { opacity: 0; }
+}
+
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+.modal-card {
+  background: linear-gradient(180deg, #5a3220, #3a1f12);
+  border: 1px solid rgba(240,200,80,0.5);
+  border-radius: 14px;
+  padding: 20px 18px 16px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  animation: modalIn 0.25s cubic-bezier(0.2, 1.4, 0.3, 1);
+}
+@keyframes modalIn {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-title {
+  font-size: 20px; font-weight: 800; color: var(--gold);
+  text-align: center; margin-bottom: 14px;
+  letter-spacing: 0.08em;
+}
+.modal-body {
+  font-size: 14px;
+  color: var(--cream);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+.modal-body .settle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(240,200,80,0.18);
+}
+.modal-body .settle-row:last-child { border-bottom: none; }
+.modal-body .settle-row .name { font-weight: 700; }
+.modal-body .settle-row .role-tag {
+  display: inline-block;
+  font-size: 10px; font-weight: 800;
+  padding: 1px 6px; border-radius: 4px;
+  margin-left: 6px; letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.1); color: var(--cream-dim);
+}
+.modal-body .settle-row .role-tag.oya { background: var(--gold); color: #2a1810; }
+.modal-body .settle-row .drinks {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.modal-body .settle-row .drinks.lose { color: #ff8c80; }
+.modal-body .settle-row .drinks.zero { color: var(--cream-dim); }
+.modal-body .settle-row .drinks.win { color: #98e898; }
+.modal-body .roll-line {
+  font-size: 13px; color: var(--cream-dim);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(240,200,80,0.2);
+}
+
+.rules-list { font-size: 13px; line-height: 1.85; }
+.rules-list dt { font-weight: 800; color: var(--gold); margin-top: 8px; }
+.rules-list dt:first-child { margin-top: 0; }
+.rules-list dd { color: var(--cream); padding-left: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SETUP -->
+  <div id="screen-setup" class="screen active">
+    <div class="title-block">
+      <div class="title">チンチロ</div>
+      <div class="subtitle">飲みゲーム版</div>
+    </div>
+    <div class="setup-form">
+      <div class="setup-row">
+        <label>人数</label>
+        <div class="counter">
+          <button data-act="players-dec">−</button>
+          <span id="set-players">3</span>
+          <button data-act="players-inc">+</button>
+        </div>
+      </div>
+      <div class="setup-row">
+        <label>効果音</label>
+        <div class="toggle">
+          <input type="checkbox" id="set-sound" checked>
+          <label for="set-sound"></label>
+        </div>
+      </div>
+      <div class="setup-row">
+        <label>振動</label>
+        <div class="toggle">
+          <input type="checkbox" id="set-vibe" checked>
+          <label for="set-vibe"></label>
+        </div>
+      </div>
+    </div>
+    <div class="setup-form">
+      <div id="player-names"></div>
+    </div>
+    <button id="btn-start" class="btn-primary big">対局開始</button>
+    <button id="btn-rules" class="btn-link">ルールを見る</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="screen">
+    <header class="game-header">
+      <span class="round-label">第<span id="round-num">1</span>局</span>
+      <button id="btn-menu" class="icon-btn">≡</button>
+    </header>
+    <div class="roster" id="roster"></div>
+    <div class="three-stage">
+      <canvas id="three-canvas"></canvas>
+      <div class="roll-label" id="roll-label"></div>
+    </div>
+    <div class="turn-info">
+      <div class="turn-name-row">
+        <span class="turn-name" id="turn-name">P1</span>
+      </div>
+      <div class="turn-meta">
+        <span>累計 <strong id="turn-total">0</strong> 杯</span>
+        <span>残り <strong id="turn-rolls">3</strong> 投</span>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button id="btn-roll" class="btn-primary big">振る</button>
+    </div>
+    <div class="log-wrap">
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div id="screen-end" class="screen">
+    <div class="title-block">
+      <div class="title" style="font-size:30px">対局終了</div>
+      <div class="subtitle">累計 飲み杯数</div>
+    </div>
+    <div class="end-results" id="end-results"></div>
+    <button id="btn-restart" class="btn-primary big">もう一回</button>
+    <button id="btn-back-setup" class="btn-link">設定に戻る</button>
+  </div>
+</div>
+
+<div id="trans-overlay" class="overlay" hidden>
+  <div class="trans-card" id="trans-card">
+    <div class="trans-name" id="trans-name">P1</div>
+    <div class="trans-role" id="trans-role">の番</div>
+    <div class="trans-hint">タップして続ける</div>
+  </div>
+</div>
+
+<div id="yaku-overlay" class="overlay yaku-overlay" hidden>
+  <div class="yaku-text" id="yaku-text"></div>
+  <div class="yaku-sub" id="yaku-sub"></div>
+</div>
+
+<div id="modal" class="modal-back" hidden>
+  <div class="modal-card">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="btn-primary" id="modal-ok" style="width:100%">OK</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
+// =====================================================
+// THREE.JS / CANNON-ES SETUP
+// =====================================================
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(0, 7.4, 3.2);
+camera.lookAt(0, 0.1, 0);
+
+function resize() {
+  const stage = document.querySelector('.three-stage');
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', resize);
+
+// LIGHTS
+scene.add(new THREE.AmbientLight(0xfff5dc, 0.5));
+const key = new THREE.DirectionalLight(0xfff0c8, 1.4);
+key.position.set(-2.5, 7, 3);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.left = -3;
+key.shadow.camera.right = 3;
+key.shadow.camera.top = 3;
+key.shadow.camera.bottom = -3;
+key.shadow.camera.near = 1;
+key.shadow.camera.far = 16;
+key.shadow.bias = -0.0008;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xa8c0ff, 0.4);
+fill.position.set(3, 4, -2);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffaa66, 0.35);
+rim.position.set(0, 2, -4);
+scene.add(rim);
+
+// BOWL (flat interior with small filleted edge — so the physics flat floor matches the visible surface)
+const INNER_R = 1.85;
+const OUTER_R = 2.25;
+const RIM_Y = 0.95;
+const FILLET_R = 0.04;            // small softening between floor and wall
+const FLOOR_R = INNER_R - FILLET_R; // 1.81 — flat floor radius; physics walls placed accordingly
+const bowlPoints = [];
+// center bottom
+bowlPoints.push(new THREE.Vector2(0, 0));
+// flat interior floor out to fillet start
+bowlPoints.push(new THREE.Vector2(FLOOR_R, 0));
+// tiny fillet from floor up to inside wall
+for (let i = 1; i <= 4; i++) {
+  const t = i / 4;
+  const a = t * Math.PI / 2;
+  const x = FLOOR_R + FILLET_R * Math.sin(a);
+  const y = FILLET_R * (1 - Math.cos(a));
+  bowlPoints.push(new THREE.Vector2(x, y));
+}
+// vertical inside wall up to rim
+bowlPoints.push(new THREE.Vector2(INNER_R, RIM_Y));
+// rim top: short flat top from inner to outer
+bowlPoints.push(new THREE.Vector2(INNER_R + 0.01, RIM_Y + 0.02));
+bowlPoints.push(new THREE.Vector2(OUTER_R, RIM_Y + 0.02));
+// outside curving down to base
+for (let i = 0; i <= 16; i++) {
+  const t = i / 16;
+  const a = t * Math.PI / 2;
+  const x = OUTER_R - 0.06 * Math.sin(a);
+  const y = (RIM_Y + 0.02) * (1 - Math.sin(a));
+  bowlPoints.push(new THREE.Vector2(x, Math.max(0, y)));
+}
+// close the path back to center
+bowlPoints.push(new THREE.Vector2(0, 0));
+
+const bowlGeom = new THREE.LatheGeometry(bowlPoints, 80);
+bowlGeom.computeVertexNormals();
+const bowlMat = new THREE.MeshStandardMaterial({
+  color: 0x8a4824,
+  roughness: 0.8,
+  metalness: 0.05,
+  side: THREE.DoubleSide,
+});
+const bowlMesh = new THREE.Mesh(bowlGeom, bowlMat);
+bowlMesh.receiveShadow = true;
+scene.add(bowlMesh);
+
+// inner darker disc to give the floor a different tone
+const innerDiscGeom = new THREE.CircleGeometry(FLOOR_R - 0.005, 64);
+const innerDiscMat = new THREE.MeshStandardMaterial({
+  color: 0x3a1c0e,
+  roughness: 0.95,
+  metalness: 0,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+  polygonOffsetUnits: -2,
+});
+const innerDisc = new THREE.Mesh(innerDiscGeom, innerDiscMat);
+innerDisc.rotation.x = -Math.PI / 2;
+innerDisc.position.y = 0.002;
+innerDisc.receiveShadow = true;
+scene.add(innerDisc);
+
+// table surface (subtle, large) underneath bowl
+const tableGeom = new THREE.CircleGeometry(8, 48);
+const tableMat = new THREE.MeshStandardMaterial({
+  color: 0x4a2818,
+  roughness: 0.95,
+  metalness: 0,
+  transparent: true,
+  opacity: 0.0,
+});
+const table = new THREE.Mesh(tableGeom, tableMat);
+table.rotation.x = -Math.PI / 2;
+table.position.y = -0.001;
+scene.add(table);
+
+// PHYSICS WORLD
+const world = new CANNON.World();
+world.gravity.set(0, -22, 0);
+world.broadphase = new CANNON.NaiveBroadphase();
+world.solver.iterations = 14;
+world.allowSleep = true;
+world.defaultContactMaterial.friction = 0.3;
+world.defaultContactMaterial.restitution = 0.35;
+
+const floorMat = new CANNON.Material('floor');
+const diceMat = new CANNON.Material('dice');
+world.addContactMaterial(new CANNON.ContactMaterial(floorMat, diceMat, {
+  friction: 0.4,
+  restitution: 0.25,
+}));
+world.addContactMaterial(new CANNON.ContactMaterial(diceMat, diceMat, {
+  friction: 0.2,
+  restitution: 0.3,
+}));
+
+// floor body
+const floorBody = new CANNON.Body({ mass: 0, material: floorMat });
+floorBody.addShape(new CANNON.Plane());
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+world.addBody(floorBody);
+
+// circular wall — inner face aligned with the flat floor's outer edge
+const WALL_THICK = 0.1;           // half-extent in radial direction
+const WALL_R = FLOOR_R + WALL_THICK; // wall center; inner face at FLOOR_R
+const WALL_SEGMENTS = 32;
+for (let i = 0; i < WALL_SEGMENTS; i++) {
+  const angle = (i / WALL_SEGMENTS) * Math.PI * 2;
+  const x = Math.cos(angle) * WALL_R;
+  const z = Math.sin(angle) * WALL_R;
+  const seg = (Math.PI * 2 * WALL_R) / WALL_SEGMENTS;
+  const wallBody = new CANNON.Body({
+    mass: 0,
+    material: floorMat,
+    shape: new CANNON.Box(new CANNON.Vec3(seg / 2 + 0.05, 1.0, WALL_THICK)),
+  });
+  wallBody.position.set(x, 1.0, z);
+  // orient wall's thickness axis (local Z) to point radially outward
+  const yaw = Math.atan2(z, x) + Math.PI / 2;
+  wallBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -yaw);
+  world.addBody(wallBody);
+}
+
+// === DICE ===
+const DIE_SIZE = 0.42;
+const HALF = DIE_SIZE / 2;
+const NUM_DICE = 3;
+
+function makeFaceTexture(value) {
+  const SZ = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = SZ;
+  const ctx = canvas.getContext('2d');
+  // background gradient
+  const grad = ctx.createLinearGradient(0, 0, SZ, SZ);
+  grad.addColorStop(0, '#fffbf0');
+  grad.addColorStop(0.55, '#f4e6c0');
+  grad.addColorStop(1, '#dfc89c');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, SZ, SZ);
+  // subtle noise / rim shading
+  const rim = ctx.createRadialGradient(SZ/2, SZ/2, SZ*0.1, SZ/2, SZ/2, SZ*0.7);
+  rim.addColorStop(0, 'rgba(255,255,255,0)');
+  rim.addColorStop(1, 'rgba(120,80,40,0.18)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(0, 0, SZ, SZ);
+  // border
+  ctx.strokeStyle = 'rgba(110,80,40,0.45)';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, SZ - 6, SZ - 6);
+  // pip layout (3x3 grid centers at 64, 128, 192)
+  const POS = {
+    1: [[128, 128]],
+    2: [[68, 68], [188, 188]],
+    3: [[68, 68], [128, 128], [188, 188]],
+    4: [[68, 68], [188, 68], [68, 188], [188, 188]],
+    5: [[68, 68], [188, 68], [128, 128], [68, 188], [188, 188]],
+    6: [[68, 60], [188, 60], [68, 128], [188, 128], [68, 196], [188, 196]],
+  };
+  for (const [x, y] of POS[value]) {
+    const isOne = value === 1;
+    const r = isOne ? 28 : 18;
+    // pip shadow
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.arc(x + 1.5, y + 2.5, r, 0, Math.PI * 2);
+    ctx.fill();
+    // pip with radial gradient
+    const pg = ctx.createRadialGradient(x - r * 0.32, y - r * 0.32, 1, x, y, r);
+    if (isOne) {
+      pg.addColorStop(0, '#ff7a76');
+      pg.addColorStop(0.45, '#d8302c');
+      pg.addColorStop(1, '#7a1a18');
+    } else {
+      pg.addColorStop(0, '#5e5e5e');
+      pg.addColorStop(0.5, '#252525');
+      pg.addColorStop(1, '#0a0a0a');
+    }
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // highlight
+    ctx.fillStyle = isOne ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.32, r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeFaceMaterial(value) {
+  return new THREE.MeshStandardMaterial({
+    map: makeFaceTexture(value),
+    roughness: 0.5,
+    metalness: 0.0,
+  });
+}
+
+// BoxGeometry face order: [+X, -X, +Y, -Y, +Z, -Z]
+// Standard die: opposite faces sum to 7
+//   1 (top, +Y) ↔ 6 (bottom, -Y)
+//   2 (back, -Z) ↔ 5 (front, +Z)
+//   3 (left, -X) ↔ 4 (right, +X)
+const FACE_VALUES = [4, 3, 1, 6, 5, 2];
+
+function makeDieMesh() {
+  const geo = new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 1, 1, 1);
+  const materials = FACE_VALUES.map(makeFaceMaterial);
+  const mesh = new THREE.Mesh(geo, materials);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+  return mesh;
+}
+
+const diceMeshes = [];
+const diceBodies = [];
+for (let i = 0; i < NUM_DICE; i++) {
+  const mesh = makeDieMesh();
+  scene.add(mesh);
+  diceMeshes.push(mesh);
+
+  const body = new CANNON.Body({
+    mass: 0.4,
+    shape: new CANNON.Box(new CANNON.Vec3(HALF, HALF, HALF)),
+    material: diceMat,
+    angularDamping: 0.08,
+    linearDamping: 0.05,
+    allowSleep: true,
+    sleepSpeedLimit: 0.08,
+    sleepTimeLimit: 0.3,
+  });
+  body.position.set(-0.7 + i * 0.7, 0.4, 0);
+  body.sleep();
+  world.addBody(body);
+  diceBodies.push(body);
+}
+
+function syncDiceMeshes() {
+  for (let i = 0; i < NUM_DICE; i++) {
+    diceMeshes[i].position.copy(diceBodies[i].position);
+    diceMeshes[i].quaternion.copy(diceBodies[i].quaternion);
+  }
+}
+
+function setDiceRest(values) {
+  // arrange three dice nicely at rest with given face up
+  const positions = [
+    { x: -0.55, z: 0.05 },
+    { x:  0.0,  z: -0.15 },
+    { x:  0.55, z: 0.1 },
+  ];
+  const FACE_UP_QUATS = {
+    1: new THREE.Quaternion(),
+    6: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)),
+    2: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2, 0, 0)),
+    5: new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0)),
+    3: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI/2)),
+    4: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI/2)),
+  };
+  for (let i = 0; i < NUM_DICE; i++) {
+    const p = positions[i];
+    const v = values ? values[i] : 1;
+    const q = FACE_UP_QUATS[v].clone();
+    // small random yaw for variety
+    const yaw = (Math.random() - 0.5) * 0.6;
+    q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
+    diceBodies[i].position.set(p.x, HALF + 0.001, p.z);
+    diceBodies[i].velocity.setZero();
+    diceBodies[i].angularVelocity.setZero();
+    diceBodies[i].quaternion.set(q.x, q.y, q.z, q.w);
+    diceBodies[i].sleep();
+  }
+  syncDiceMeshes();
+}
+
+// determine top face
+function getDieValue(body) {
+  // local face normals → which value
+  const NORMALS = [
+    { v: 4, dir: new CANNON.Vec3(1, 0, 0) },
+    { v: 3, dir: new CANNON.Vec3(-1, 0, 0) },
+    { v: 1, dir: new CANNON.Vec3(0, 1, 0) },
+    { v: 6, dir: new CANNON.Vec3(0, -1, 0) },
+    { v: 5, dir: new CANNON.Vec3(0, 0, 1) },
+    { v: 2, dir: new CANNON.Vec3(0, 0, -1) },
+  ];
+  let bestY = -Infinity, bestV = 1;
+  const out = new CANNON.Vec3();
+  for (const n of NORMALS) {
+    body.quaternion.vmult(n.dir, out);
+    if (out.y > bestY) { bestY = out.y; bestV = n.v; }
+  }
+  return bestV;
+}
+
+// ROLL
+let rollState = 'idle';
+let rollResolve = null;
+let rollStartTime = 0;
+let nudgedAt = 0;
+
+function rollPhysicsDice() {
+  return new Promise((resolve) => {
+    rollResolve = resolve;
+    rollState = 'rolling';
+    rollStartTime = performance.now();
+    nudgedAt = 0;
+    const yawBase = Math.random() * Math.PI * 2;
+    diceBodies.forEach((body, i) => {
+      const startYaw = yawBase + (i - 1) * 0.5;
+      const startR = 1.4;
+      body.position.set(
+        Math.cos(startYaw) * startR,
+        2.0 + i * 0.4 + Math.random() * 0.3,
+        Math.sin(startYaw) * startR
+      );
+      // throw toward center with random spread
+      const throwSpeed = 4 + Math.random() * 2;
+      body.velocity.set(
+        -Math.cos(startYaw) * throwSpeed + (Math.random() - 0.5) * 1.5,
+        2 + Math.random() * 1.5,
+        -Math.sin(startYaw) * throwSpeed + (Math.random() - 0.5) * 1.5
+      );
+      body.angularVelocity.set(
+        (Math.random() - 0.5) * 30,
+        (Math.random() - 0.5) * 30,
+        (Math.random() - 0.5) * 30
+      );
+      body.quaternion.setFromEuler(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
+      body.wakeUp();
+    });
+  });
+}
+
+// MAIN LOOP
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, clock.getDelta());
+  world.step(1 / 60, dt, 4);
+  syncDiceMeshes();
+  renderer.render(scene, camera);
+
+  if (rollState === 'rolling') {
+    const now = performance.now();
+    const elapsed = now - rollStartTime;
+
+    // detect dice resting on edge (face normal y close to 0) → nudge once
+    if (elapsed > 1500 && nudgedAt === 0) {
+      const sleepingCount = diceBodies.filter(b => b.sleepState === CANNON.Body.SLEEPING).length;
+      if (sleepingCount > 0) {
+        let needNudge = false;
+        for (const body of diceBodies) {
+          if (body.sleepState === CANNON.Body.SLEEPING) {
+            const NORMALS = [
+              new CANNON.Vec3(1,0,0), new CANNON.Vec3(-1,0,0),
+              new CANNON.Vec3(0,1,0), new CANNON.Vec3(0,-1,0),
+              new CANNON.Vec3(0,0,1), new CANNON.Vec3(0,0,-1),
+            ];
+            let bestAlign = 0;
+            const out = new CANNON.Vec3();
+            for (const n of NORMALS) {
+              body.quaternion.vmult(n, out);
+              if (Math.abs(out.y) > bestAlign) bestAlign = Math.abs(out.y);
+            }
+            if (bestAlign < 0.92) { needNudge = true; break; }
+          }
+        }
+        if (needNudge) {
+          for (const body of diceBodies) {
+            body.wakeUp();
+            body.angularVelocity.set(
+              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 6
+            );
+            body.velocity.y += 0.6;
+          }
+          nudgedAt = elapsed;
+        }
+      }
+    }
+
+    const settled = diceBodies.every(b =>
+      b.sleepState === CANNON.Body.SLEEPING ||
+      (b.velocity.lengthSquared() < 0.005 && b.angularVelocity.lengthSquared() < 0.005)
+    );
+
+    const minTime = nudgedAt > 0 ? nudgedAt + 800 : 800;
+    if ((settled && elapsed > minTime) || elapsed > 5500) {
+      rollState = 'idle';
+      const values = diceBodies.map(getDieValue);
+      const cb = rollResolve;
+      rollResolve = null;
+      if (cb) cb(values);
+    }
+  }
+}
+
+resize();
+animate();
+
+// =====================================================
+// HAND EVALUATION
+// =====================================================
+function evalRoll(dice) {
+  const sorted = [...dice].sort((a, b) => a - b);
+  const [a, b, c] = sorted;
+  if (a === b && b === c) {
+    if (a === 1) return { type: 'pinzoro', value: 1, mult: 5, label: 'ピンゾロ', dice };
+    return { type: 'zorome', value: a, mult: 3, label: `ゾロ目 ${a}`, dice };
+  }
+  if (a === 4 && b === 5 && c === 6) return { type: 'shigoro', value: 6, mult: 2, label: 'シゴロ', dice };
+  if (a === 1 && b === 2 && c === 3) return { type: 'hifumi', value: 0, mult: 2, label: 'ヒフミ', dice };
+  if (a === b) return { type: 'me', value: c, mult: 1, label: `${c}の目`, dice };
+  if (b === c) return { type: 'me', value: a, mult: 1, label: `${a}の目`, dice };
+  return { type: 'menashi', value: 0, mult: 1, label: '目なし', dice };
+}
+
+// =====================================================
+// SOUND
+// =====================================================
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playClatter() {
+  if (!state.config.soundOn) return;
+  const ctx = getAudio(); if (!ctx) return;
+  const t0 = ctx.currentTime;
+  for (let i = 0; i < 16; i++) {
+    const t = t0 + Math.random() * 1.4;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = i % 2 === 0 ? 'square' : 'triangle';
+    osc.frequency.value = 200 + Math.random() * 700;
+    filter.type = 'bandpass';
+    filter.frequency.value = 800 + Math.random() * 1500;
+    filter.Q.value = 4;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.05, t + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07 + Math.random() * 0.05);
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.13);
+  }
+  const tThud = t0 + 1.2;
+  const oscT = ctx.createOscillator(), gainT = ctx.createGain();
+  oscT.type = 'sine';
+  oscT.frequency.setValueAtTime(140, tThud);
+  oscT.frequency.exponentialRampToValueAtTime(45, tThud + 0.2);
+  gainT.gain.setValueAtTime(0.2, tThud);
+  gainT.gain.exponentialRampToValueAtTime(0.001, tThud + 0.25);
+  oscT.connect(gainT).connect(ctx.destination);
+  oscT.start(tThud); oscT.stop(tThud + 0.28);
+}
+function playYakuChime(good = true) {
+  if (!state.config.soundOn) return;
+  const ctx = getAudio(); if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const notes = good ? [523.25, 659.25, 783.99, 1046.5] : [196, 174.61, 146.83];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    const t = t0 + i * 0.09;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.5);
+  });
+}
+function playClick() {
+  if (!state.config.soundOn) return;
+  const ctx = getAudio(); if (!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = 880;
+  gain.gain.setValueAtTime(0.05, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.05);
+}
+function vibrate(p) {
+  if (!state.config.vibeOn) return;
+  if (navigator.vibrate) navigator.vibrate(p);
+}
+
+// =====================================================
+// DEFAULT NAMES (shuffled each load)
+// =====================================================
+const NAME_POOL = [
+  'ザル', 'ヘベレケ', '酔いどれ', '飲兵衛', '千鳥足',
+  '番長', '若頭', '姐さん', 'お頭', '大将',
+  'たぬき', 'きつね', 'パンダ', 'カバ', 'うさぎ',
+  '鉄砲玉', '一発屋', 'ぼんぼん', 'マスター', '兄貴',
+];
+function shuffleNames(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const FUN_NAMES = shuffleNames(NAME_POOL);
+
+// =====================================================
+// STATE
+// =====================================================
+const state = {
+  config: { numPlayers: 3, soundOn: true, vibeOn: true },
+  players: [],
+  round: 1,
+  phase: 'setup', // setup | rolling | between | roundEnd | gameEnd
+  rollOrder: [],
+  currentPos: -1,
+  rollsLeft: 3,
+  log: [],
+  roundResults: [], // [{ playerIdx, result }, ...]
+  isRolling: false,
+};
+
+// =====================================================
+// LOG
+// =====================================================
+function logEntry(text, cls = '') {
+  state.log.push({ text, cls });
+  if (state.log.length > 60) state.log.shift();
+  renderLog();
+}
+function renderLog() {
+  const el = document.getElementById('log');
+  el.innerHTML = state.log.slice(-30).map(e =>
+    `<div class="entry${e.cls ? ' ' + e.cls : ''}">${e.text}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// =====================================================
+// PLAYERS
+// =====================================================
+function activeIdx() {
+  if (state.phase === 'rolling' && state.currentPos >= 0) {
+    return state.rollOrder[state.currentPos];
+  }
+  return -1;
+}
+
+// =====================================================
+// SETUP UI
+// =====================================================
+function renderPlayerNames() {
+  const wrap = document.getElementById('player-names');
+  wrap.innerHTML = '';
+  for (let i = 0; i < state.config.numPlayers; i++) {
+    const row = document.createElement('div');
+    row.className = 'player-name-row';
+    const existing = state.players[i] ? state.players[i].name : '';
+    const def = FUN_NAMES[i] || `P${i + 1}`;
+    row.innerHTML = `
+      <div class="num">${i + 1}</div>
+      <input type="text" maxlength="8" placeholder="${def}" value="${existing || def}">
+    `;
+    wrap.appendChild(row);
+  }
+}
+function readPlayerNames() {
+  return Array.from(document.querySelectorAll('.player-name-row input'))
+    .map((el, i) => (el.value || FUN_NAMES[i] || `P${i + 1}`).trim().slice(0, 8));
+}
+function renderSetupValues() {
+  document.getElementById('set-players').textContent = state.config.numPlayers;
+}
+
+function setupBindings() {
+  document.querySelectorAll('[data-act]').forEach(el => {
+    el.addEventListener('click', () => {
+      playClick();
+      const act = el.dataset.act;
+      if (act === 'players-inc') {
+        state.config.numPlayers = Math.min(6, state.config.numPlayers + 1);
+        renderPlayerNames();
+      }
+      if (act === 'players-dec') {
+        state.config.numPlayers = Math.max(2, state.config.numPlayers - 1);
+        renderPlayerNames();
+      }
+      renderSetupValues();
+    });
+  });
+  document.getElementById('set-sound').addEventListener('change', e => {
+    state.config.soundOn = e.target.checked;
+    if (e.target.checked) playClick();
+  });
+  document.getElementById('set-vibe').addEventListener('change', e => {
+    state.config.vibeOn = e.target.checked;
+    if (e.target.checked) vibrate(20);
+  });
+  document.getElementById('btn-start').addEventListener('click', () => { playClick(); startGame(); });
+  document.getElementById('btn-rules').addEventListener('click', showRules);
+  document.getElementById('btn-roll').addEventListener('click', onRollClicked);
+  document.getElementById('btn-menu').addEventListener('click', showMenu);
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    playClick();
+    state.players.forEach(p => { p.totalDrinks = 0; });
+    state.round = 1;
+    state.log = [];
+    showScreen('game');
+    setTimeout(resize, 50);
+    startRound();
+  });
+  document.getElementById('btn-back-setup').addEventListener('click', () => {
+    playClick();
+    showScreen('setup');
+  });
+  document.getElementById('modal-ok').addEventListener('click', () => {
+    playClick();
+    closeModal();
+    if (state._modalCb) {
+      const cb = state._modalCb;
+      state._modalCb = null;
+      cb();
+    }
+  });
+  document.getElementById('trans-card').addEventListener('click', () => {
+    playClick();
+    document.getElementById('trans-overlay').hidden = true;
+    if (state._transCb) {
+      const cb = state._transCb;
+      state._transCb = null;
+      cb();
+    }
+  });
+}
+
+function showScreen(name) {
+  ['setup', 'game', 'end'].forEach(n => {
+    document.getElementById(`screen-${n}`).classList.toggle('active', n === name);
+  });
+}
+
+// =====================================================
+// GAME FLOW
+// =====================================================
+function startGame() {
+  const names = readPlayerNames();
+  state.players = names.map(name => ({
+    name,
+    totalDrinks: 0,
+    roundDrinks: 0,
+  }));
+  state.round = 1;
+  state.log = [];
+  showScreen('game');
+  setTimeout(resize, 50);
+  startRound();
+}
+
+function startRound() {
+  state.players.forEach(p => { p.roundDrinks = 0; });
+  state.rollOrder = state.players.map((_, i) => i);
+  state.currentPos = -1;
+  state.rollsLeft = 3;
+  state.phase = 'between';
+  state.roundResults = [];
+
+  document.getElementById('round-num').textContent = state.round;
+  logEntry(`──── 第${state.round}局 ────`);
+
+  setDiceRest([1, 1, 1]);
+  renderRoster();
+  beginNextPlayer();
+}
+
+function showTransition(playerIdx, onContinue) {
+  const overlay = document.getElementById('trans-overlay');
+  document.getElementById('trans-name').textContent = state.players[playerIdx].name;
+  document.getElementById('trans-role').textContent = 'の番';
+  overlay.hidden = false;
+  state._transCb = onContinue;
+}
+
+function onRollClicked() {
+  if (state.isRolling) return;
+  if (state.phase !== 'rolling') return;
+  getAudio();
+  doRoll();
+}
+
+async function doRoll() {
+  state.isRolling = true;
+  state.rollsLeft--;
+  document.getElementById('btn-roll').disabled = true;
+  vibrate([10, 30, 10, 30, 10, 30, 10]);
+  playClatter();
+  hideRollLabel();
+
+  const values = await rollPhysicsDice();
+  state.isRolling = false;
+  document.getElementById('btn-roll').disabled = false;
+  handleRollResult(evalRoll(values));
+}
+
+function showRollLabel(t) {
+  const el = document.getElementById('roll-label');
+  el.textContent = t;
+  el.classList.add('show');
+}
+function hideRollLabel() {
+  document.getElementById('roll-label').classList.remove('show');
+}
+
+async function showYaku(label, sub = '', variant = 'good') {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('yaku-overlay');
+    const text = document.getElementById('yaku-text');
+    const subEl = document.getElementById('yaku-sub');
+    text.className = 'yaku-text' + (variant === 'bad' ? ' bad' : variant === 'menashi' ? ' menashi' : '');
+    text.textContent = label;
+    subEl.textContent = sub;
+    overlay.hidden = false;
+    if (variant === 'bad' || variant === 'menashi') {
+      vibrate([100, 80, 100]);
+      playYakuChime(false);
+    } else {
+      vibrate([20, 30, 80]);
+      playYakuChime(true);
+    }
+    text.style.animation = 'none'; void text.offsetWidth; text.style.animation = '';
+    subEl.style.animation = 'none'; void subEl.offsetWidth; subEl.style.animation = '';
+    setTimeout(() => { overlay.hidden = true; resolve(); }, 1700);
+  });
+}
+
+function describeRoll(r) { return `[${r.dice.join('・')}] ${r.label}`; }
+
+function handleRollResult(result) {
+  const idx = activeIdx();
+  const player = state.players[idx];
+  const cls = result.type === 'menashi' ? '' :
+              (result.type === 'pinzoro' || result.type === 'zorome' || result.type === 'shigoro' ? 'yaku' :
+              (result.type === 'hifumi' ? 'lose' : ''));
+  logEntry(`${player.name}：${describeRoll(result)}`, cls);
+  showRollLabel(result.label);
+
+  if (result.type === 'menashi' && state.rollsLeft > 0) {
+    setTimeout(() => { hideRollLabel(); renderTurn(); }, 700);
+    return;
+  }
+
+  // lock the phase so spam clicks while we play yaku/transition cannot fire another roll
+  state.phase = 'between';
+  setTimeout(() => {
+    hideRollLabel();
+    finishCurrentTurn(result, idx);
+  }, 700);
+}
+
+async function finishCurrentTurn(result, idx) {
+  state.roundResults.push({ playerIdx: idx, result });
+
+  // play yaku celebration / commiseration for special results
+  let yakuVariant = null;
+  if (result.type === 'pinzoro') yakuVariant = { label: 'ピンゾロ', sub: '最強 ★', variant: 'good' };
+  else if (result.type === 'zorome') yakuVariant = { label: result.label, sub: '強い役！', variant: 'good' };
+  else if (result.type === 'shigoro') yakuVariant = { label: 'シゴロ', sub: '強い役！', variant: 'good' };
+  else if (result.type === 'hifumi') yakuVariant = { label: 'ヒフミ', sub: 'ハズレ…', variant: 'bad' };
+  else if (result.type === 'menashi') yakuVariant = { label: '目なし', sub: 'ハズレ…', variant: 'menashi' };
+
+  if (yakuVariant) {
+    await showYaku(yakuVariant.label, yakuVariant.sub, yakuVariant.variant);
+  }
+
+  setTimeout(() => beginNextPlayer(), 350);
+}
+
+function beginNextPlayer() {
+  state.currentPos++;
+  if (state.currentPos >= state.rollOrder.length) {
+    finishRound();
+    return;
+  }
+  state.phase = 'rolling';
+  state.rollsLeft = 3;
+  setDiceRest([1, 1, 1]);
+  const idx = state.rollOrder[state.currentPos];
+  showTransition(idx, () => { renderTurn(); });
+}
+
+function finishRound() {
+  state.phase = 'roundEnd';
+  applyRoundDrinks();
+  showRoundEndModal();
+}
+
+// Compute drinks based on all players' results.
+// Rule: only ONE drinker per round — the single weakest result. If multiple
+//   players are tied for weakest, pick one at random. The amount is the
+//   strongest yaku's multiplier in the round (pinzoro 5 / zorome 3 /
+//   shigoro 2 / default 1).
+function calcRoundDrinks() {
+  const N = state.players.length;
+  const drinks = new Array(N).fill(0);
+  const notes = new Array(N).fill('');
+  const winnerSet = new Set();
+
+  function rankOf(r) {
+    if (r.type === 'pinzoro') return 100;
+    if (r.type === 'zorome') return 50 + r.value;
+    if (r.type === 'shigoro') return 40;
+    if (r.type === 'me') return 20 + r.value;
+    if (r.type === 'menashi') return 10;
+    if (r.type === 'hifumi') return 5;
+    return 0;
+  }
+  function winLabel(r) {
+    if (r.type === 'pinzoro') return 'ピンゾロ 勝ち！';
+    if (r.type === 'zorome') return `ゾロ目${r.value} 勝ち！`;
+    if (r.type === 'shigoro') return 'シゴロ 勝ち！';
+    if (r.type === 'me') return `${r.value}の目 勝ち`;
+    return '勝ち';
+  }
+
+  const ranked = state.roundResults.map(r => ({
+    playerIdx: r.playerIdx,
+    result: r.result,
+    rank: rankOf(r.result),
+  }));
+
+  const minRank = Math.min(...ranked.map(r => r.rank));
+  const maxRank = Math.max(...ranked.map(r => r.rank));
+
+  // determine the round's stake from the strongest yaku rolled
+  let stake = 1;
+  let stakeLabel = '';
+  for (const r of state.roundResults) {
+    if (r.result.type === 'pinzoro' && stake < 5) {
+      stake = 5; stakeLabel = 'ピンゾロ';
+    } else if (r.result.type === 'zorome' && stake < 3) {
+      stake = 3; stakeLabel = `ゾロ目${r.result.value}`;
+    } else if (r.result.type === 'shigoro' && stake < 2) {
+      stake = 2; stakeLabel = 'シゴロ';
+    }
+  }
+
+  if (minRank === maxRank) {
+    // everyone tied — no drinker, no clear winner
+    for (let i = 0; i < N; i++) notes[i] = '同点';
+    return { drinks, notes, winners: [] };
+  }
+
+  // pick a single loser from those at minRank (random tiebreak)
+  const losers = ranked.filter(r => r.rank === minRank);
+  const loser = losers[Math.floor(Math.random() * losers.length)];
+  drinks[loser.playerIdx] = stake;
+  let loserReason;
+  if (loser.result.type === 'hifumi') loserReason = 'ヒフミ';
+  else if (loser.result.type === 'menashi') loserReason = '目なし';
+  else loserReason = `${loser.result.value}の目（最弱）`;
+  notes[loser.playerIdx] = stakeLabel
+    ? `${loserReason} → ${stakeLabel}に負け ${stake}杯`
+    : `${loserReason} ${stake}杯`;
+
+  // mark winners — anyone tied at maxRank
+  for (const r of ranked) {
+    if (r.rank === maxRank) {
+      winnerSet.add(r.playerIdx);
+      notes[r.playerIdx] = winLabel(r.result);
+    }
+  }
+
+  return { drinks, notes, winners: Array.from(winnerSet) };
+}
+
+function applyRoundDrinks() {
+  state._roundCalc = calcRoundDrinks();
+  for (let i = 0; i < state.players.length; i++) {
+    const n = state._roundCalc.drinks[i];
+    state.players[i].roundDrinks = n;
+    state.players[i].totalDrinks += n;
+  }
+}
+
+function showRoundEndModal() {
+  const calc = state._roundCalc;
+  let html = '';
+  // each player's roll line
+  html += '<div style="margin-bottom:8px">';
+  for (const r of state.roundResults) {
+    const p = state.players[r.playerIdx];
+    const isWinner = calc.winners.includes(r.playerIdx);
+    html += `<div class="roll-line" style="margin:0; padding:4px 0; border-bottom:1px dashed rgba(240,200,80,0.12); ${isWinner ? 'color:var(--gold); font-weight:700' : ''}">
+      ${p.name}：${describeRoll(r.result)}${isWinner ? ' ★' : ''}
+    </div>`;
+  }
+  html += '</div>';
+  // drinks tally
+  for (let i = 0; i < state.players.length; i++) {
+    const p = state.players[i];
+    const drinks = p.roundDrinks;
+    const note = calc.notes[i];
+    let cls = 'zero';
+    if (drinks > 0) cls = 'lose';
+    else if (calc.winners.includes(i)) cls = 'win';
+    const label = drinks > 0 ? `${drinks}杯 飲む` : (calc.winners.includes(i) ? '勝ち' : 'セーフ');
+    const noteHTML = note ? `<span class="role-tag" style="opacity:0.7">${note}</span>` : '';
+    html += `
+      <div class="settle-row">
+        <span class="name">${p.name}${noteHTML}</span>
+        <span class="drinks ${cls}">${label}</span>
+      </div>
+    `;
+  }
+  showModal(`第${state.round}局 結果`, html, () => {
+    state.round++;
+    if (state.round > 99) gameEnd(); else startRound();
+  });
+}
+
+function gameEnd() {
+  showScreen('end');
+  const ranked = state.players
+    .map((p, i) => ({ ...p, idx: i }))
+    .sort((a, b) => b.totalDrinks - a.totalDrinks);
+  const html = ranked.map((p, i) => {
+    const last = i === ranked.length - 1 && ranked.length > 1 ? 'last' : '';
+    const first = i === 0 ? 'first' : '';
+    return `
+      <div class="end-row ${first} ${last}">
+        <span><span class="rank-badge">${i + 1}</span><span class="name">${p.name}</span></span>
+        <span class="chips">${p.totalDrinks}杯</span>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('end-results').innerHTML = html;
+}
+
+// =====================================================
+// RENDER
+// =====================================================
+function renderRoster() {
+  const wrap = document.getElementById('roster');
+  wrap.innerHTML = '';
+  const a = activeIdx();
+  for (let i = 0; i < state.players.length; i++) {
+    const p = state.players[i];
+    const div = document.createElement('div');
+    div.className = 'roster-item' + (i === a ? ' active' : '');
+    div.innerHTML = `<div class="name">${p.name}</div><div class="drinks">${p.totalDrinks}</div>`;
+    wrap.appendChild(div);
+  }
+}
+
+function renderTurn() {
+  const idx = activeIdx();
+  if (idx < 0) return;
+  const p = state.players[idx];
+  document.getElementById('turn-name').textContent = p.name;
+  document.getElementById('turn-total').textContent = p.totalDrinks;
+  document.getElementById('turn-rolls').textContent = state.rollsLeft;
+  const btn = document.getElementById('btn-roll');
+  btn.textContent = state.rollsLeft === 3 ? '振る' : `振る（残${state.rollsLeft}）`;
+  renderRoster();
+}
+
+// =====================================================
+// MODAL / RULES / MENU
+// =====================================================
+function showModal(title, body, onClose) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal').hidden = false;
+  state._modalCb = onClose || null;
+}
+function closeModal() {
+  document.getElementById('modal').hidden = true;
+}
+
+function showRules() {
+  playClick();
+  const html = `
+    <dl class="rules-list">
+      <dt>進行</dt>
+      <dd>1局につき全員が順番に1回ずつ振る。3つの賽子を投げ、目が出るまで最大3回振り直し可（目なし救済）。全員振り終わったら清算。</dd>
+      <dt>清算</dt>
+      <dd>その局で<b>一番弱かった一人だけ</b>が飲む。最弱が複数いた場合はランダムで1人。誰かが強い役を出していたら、その役の倍率で飲む。</dd>
+      <dt>役の強さ（強→弱）</dt>
+      <dd><b>ピンゾロ</b>（1-1-1）… 最強。最弱は <b>5杯</b></dd>
+      <dd><b>ゾロ目</b>（同じ目3つ）… 数字大きいほど強い。最弱は <b>3杯</b></dd>
+      <dd><b>シゴロ</b>（4-5-6）… 最弱は <b>2杯</b></dd>
+      <dd><b>1〜6の目</b>（同じ2つ＋他1つ）… 数字大きいほど強い。最弱は <b>1杯</b></dd>
+      <dd><b>目なし</b>… ハズレ扱い、これより弱いのは…</dd>
+      <dd><b>ヒフミ</b>（1-2-3）… 最弱の役。ほぼ確定で飲み</dd>
+    </dl>
+  `;
+  showModal('ルール', html, null);
+}
+
+function showMenu() {
+  playClick();
+  const html = `
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <button class="btn-secondary" id="m-rules" style="width:100%">ルールを見る</button>
+      <button class="btn-secondary" id="m-end" style="width:100%">対局終了して結果へ</button>
+      <button class="btn-secondary" id="m-quit" style="width:100%">設定に戻る</button>
+    </div>
+  `;
+  showModal('メニュー', html, null);
+  document.getElementById('m-rules').addEventListener('click', () => { closeModal(); showRules(); });
+  document.getElementById('m-end').addEventListener('click', () => { closeModal(); gameEnd(); });
+  document.getElementById('m-quit').addEventListener('click', () => {
+    closeModal(); showScreen('setup'); state.phase = 'setup';
+  });
+}
+
+// =====================================================
+// INIT
+// =====================================================
+function init() {
+  renderSetupValues();
+  renderPlayerNames();
+  setupBindings();
+  setDiceRest([1, 1, 1]);
+}
+init();
+</script>
+</body>
+</html>

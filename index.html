@@ -287,9 +287,23 @@ body::after {
   font-size: 11px; font-weight: 700; color: var(--cream);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.roster-item .roll-mini {
+  font-size: 11px; font-weight: 700; color: var(--cream);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
+  margin-top: 3px; line-height: 1;
+}
+.roster-item .yaku-mini {
+  font-size: 10px; font-weight: 700;
+  margin-top: 2px; line-height: 1;
+  color: rgba(255,255,255,0.78);
+}
+.roster-item.yaku-strong .yaku-mini { color: var(--gold); text-shadow: 0 0 6px rgba(240,200,80,0.5); }
+.roster-item.yaku-weak .yaku-mini { color: #ff8888; }
+.roster-item.yaku-strong { border-color: var(--gold); box-shadow: 0 0 12px rgba(240,200,80,0.45); }
+.roster-item.yaku-weak { border-color: rgba(255,120,120,0.6); }
 .roster-item .drinks {
   font-size: 14px; font-weight: 800; color: var(--gold);
-  font-variant-numeric: tabular-nums; margin-top: 2px;
+  font-variant-numeric: tabular-nums; margin-top: 4px;
   display: flex; align-items: center; justify-content: center; gap: 3px;
 }
 .roster-item .drinks::after { content: "杯"; font-size: 9px; opacity: 0.7; }
@@ -300,6 +314,10 @@ body::after {
   font-size: 10px; font-weight: 900;
   padding: 1px 6px; border-radius: 6px;
   letter-spacing: 0.1em;
+}
+.roster-item.playoff-out { opacity: 0.45; }
+.roster-item.playoff-in {
+  outline: 2px dashed rgba(240,200,80,0.7); outline-offset: -2px;
 }
 
 /* 3D stage */
@@ -1429,6 +1447,13 @@ function startRound() {
   state.rollsLeft = 3;
   state.phase = 'between';
   state.roundResults = [];
+  // reset playoff bookkeeping from prior round
+  state.isPlayoff = false;
+  state._origResults = null;
+  state._origStake = null;
+  state._origStakeLabel = null;
+  state._origWinners = null;
+  state._playoffHistory = null;
 
   document.getElementById('round-num').textContent = state.round;
   logEntry(`──── 第${state.round}局 ────`);
@@ -1524,6 +1549,7 @@ function handleRollResult(result) {
 
 async function finishCurrentTurn(result, idx) {
   state.roundResults.push({ playerIdx: idx, result });
+  renderRoster();
 
   // play yaku celebration / commiseration for special results
   let yakuVariant = null;
@@ -1556,7 +1582,55 @@ function beginNextPlayer() {
 function finishRound() {
   state.phase = 'roundEnd';
   applyRoundDrinks();
+  if (state._roundCalc && state._roundCalc.playoff) {
+    triggerPlayoff(state._roundCalc.playoff);
+    return;
+  }
   showRoundEndModal();
+}
+
+// Multiple players tied at the lowest — start a tie-breaker playoff (決勝戦).
+function triggerPlayoff(playerIndices) {
+  // First time entering playoff for this round: snapshot the original data.
+  if (!state.isPlayoff) {
+    state._origResults = state.roundResults.slice();
+    state._origStake = state._roundCalc.stake;
+    state._origStakeLabel = state._roundCalc.stakeLabel;
+    state._origWinners = (state._roundCalc.winners || []).slice();
+    state._playoffHistory = [];
+  } else {
+    // Chained playoff: archive the playoff that just produced another tie.
+    state._playoffHistory.push({
+      indices: state.rollOrder.slice(),
+      results: state.roundResults.slice(),
+    });
+  }
+
+  const names = playerIndices.map(i => state.players[i].name).join('、');
+  const playoffNumber = (state._playoffHistory ? state._playoffHistory.length : 0) + 1;
+  const subtitle = playoffNumber > 1 ? `第${playoffNumber}回決勝戦` : '決勝戦';
+  const html = `
+    <div style="text-align:center; padding:6px 0 12px">
+      <div style="font-size:30px; font-weight:900; color:var(--gold); margin-bottom:6px; letter-spacing:0.05em">${subtitle}</div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.85); margin-bottom:4px">${names}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.6)">最弱が同点。${playerIndices.length}人で決着をつけます。</div>
+    </div>
+  `;
+  showModal(subtitle, html, () => {
+    actuallyStartPlayoff(playerIndices);
+  });
+}
+
+function actuallyStartPlayoff(playerIndices) {
+  state.rollOrder = playerIndices.slice();
+  state.currentPos = -1;
+  state.roundResults = [];
+  state.isPlayoff = true;
+  state.phase = 'between';
+  state.rollsLeft = 3;
+  setDiceRest([1, 1, 1]);
+  renderRoster();
+  beginNextPlayer();
 }
 
 // Compute drinks based on all players' results.
@@ -1596,9 +1670,10 @@ function calcRoundDrinks() {
   const minRank = Math.min(...ranked.map(r => r.rank));
   const maxRank = Math.max(...ranked.map(r => r.rank));
 
-  // determine the round's stake from the strongest yaku rolled
-  let stake = 1;
-  let stakeLabel = '';
+  // Determine stake. In a playoff, start from the original round's stake and
+  // upgrade if anyone rolled stronger this playoff.
+  let stake = state.isPlayoff ? (state._origStake || 1) : 1;
+  let stakeLabel = state.isPlayoff ? (state._origStakeLabel || '') : '';
   for (const r of state.roundResults) {
     if (r.result.type === 'pinzoro' && stake < 5) {
       stake = 5; stakeLabel = 'ピンゾロ';
@@ -1610,14 +1685,36 @@ function calcRoundDrinks() {
   }
 
   if (minRank === maxRank) {
-    // everyone tied — no drinker, no clear winner
-    for (let i = 0; i < N; i++) notes[i] = '同点';
-    return { drinks, notes, winners: [] };
+    if (!state.isPlayoff) {
+      // Original round: every result identical → no drinker
+      for (let i = 0; i < N; i++) notes[i] = '同点';
+      return { drinks, notes, winners: [], stake, stakeLabel };
+    }
+    // In a playoff, all tied again → another playoff among the same field
+    return {
+      drinks, notes,
+      winners: state._origWinners ? state._origWinners.slice() : [],
+      playoff: ranked.map(r => r.playerIdx),
+      stake, stakeLabel,
+    };
   }
 
-  // pick a single loser from those at minRank (random tiebreak)
   const losers = ranked.filter(r => r.rank === minRank);
-  const loser = losers[Math.floor(Math.random() * losers.length)];
+
+  // Multiple losers at min → trigger playoff (決勝戦) to break the tie
+  if (losers.length >= 2) {
+    return {
+      drinks, notes,
+      winners: state.isPlayoff
+        ? (state._origWinners ? state._origWinners.slice() : [])
+        : ranked.filter(r => r.rank === maxRank).map(r => r.playerIdx),
+      playoff: losers.map(r => r.playerIdx),
+      stake, stakeLabel,
+    };
+  }
+
+  // Single loser
+  const loser = losers[0];
   const isHifumi = loser.result.type === 'hifumi';
   const loserDrinks = isHifumi ? stake * 2 : stake;
   drinks[loser.playerIdx] = loserDrinks;
@@ -1626,23 +1723,37 @@ function calcRoundDrinks() {
   else if (loser.result.type === 'menashi') loserReason = '目なし';
   else loserReason = `${loser.result.value}の目（最弱）`;
   const hifumiTag = isHifumi ? '（ヒフミ×2）' : '';
+  const playoffTag = state.isPlayoff ? '（決勝戦負け）' : '';
   notes[loser.playerIdx] = stakeLabel
-    ? `${loserReason} → ${stakeLabel}に負け ${loserDrinks}杯${hifumiTag}`
-    : `${loserReason} ${loserDrinks}杯${hifumiTag}`;
+    ? `${loserReason} → ${stakeLabel}に負け ${loserDrinks}杯${hifumiTag}${playoffTag}`
+    : `${loserReason} ${loserDrinks}杯${hifumiTag}${playoffTag}`;
 
-  // mark winners — anyone tied at maxRank
-  for (const r of ranked) {
-    if (r.rank === maxRank) {
-      winnerSet.add(r.playerIdx);
-      notes[r.playerIdx] = winLabel(r.result);
+  // Mark winners. In a playoff use the original round's winners; otherwise the
+  // top-ranked players in this round.
+  if (state.isPlayoff) {
+    for (const w of (state._origWinners || [])) {
+      winnerSet.add(w);
+      const origR = (state._origResults || []).find(rr => rr.playerIdx === w);
+      if (origR) notes[w] = winLabel(origR.result);
+    }
+  } else {
+    for (const r of ranked) {
+      if (r.rank === maxRank) {
+        winnerSet.add(r.playerIdx);
+        notes[r.playerIdx] = winLabel(r.result);
+      }
     }
   }
 
-  return { drinks, notes, winners: Array.from(winnerSet) };
+  return { drinks, notes, winners: Array.from(winnerSet), stake, stakeLabel };
 }
 
 function applyRoundDrinks() {
   state._roundCalc = calcRoundDrinks();
+  if (state._roundCalc.playoff) {
+    // Drinks deferred — will be applied after the playoff resolves.
+    return;
+  }
   for (let i = 0; i < state.players.length; i++) {
     const n = state._roundCalc.drinks[i];
     state.players[i].roundDrinks = n;
@@ -1653,16 +1764,49 @@ function applyRoundDrinks() {
 function showRoundEndModal() {
   const calc = state._roundCalc;
   let html = '';
-  // each player's roll line
-  html += '<div style="margin-bottom:8px">';
-  for (const r of state.roundResults) {
-    const p = state.players[r.playerIdx];
-    const isWinner = calc.winners.includes(r.playerIdx);
-    html += `<div class="roll-line" style="margin:0; padding:4px 0; border-bottom:1px dashed rgba(240,200,80,0.12); ${isWinner ? 'color:var(--gold); font-weight:700' : ''}">
-      ${p.name}：${describeRoll(r.result)}${isWinner ? ' ★' : ''}
-    </div>`;
+
+  // Build list of phases: original round, then any playoffs
+  const phases = [];
+  if (state._origResults) {
+    phases.push({ label: '本戦', results: state._origResults });
+    const history = state._playoffHistory || [];
+    history.forEach((h, idx) => {
+      phases.push({
+        label: history.length > 1 ? `第${idx + 1}回決勝戦` : '決勝戦',
+        results: h.results,
+      });
+    });
+    phases.push({
+      label: history.length > 0 ? `第${history.length + 1}回決勝戦` : '決勝戦',
+      results: state.roundResults,
+    });
+  } else {
+    phases.push({ label: null, results: state.roundResults });
   }
-  html += '</div>';
+
+  // Loser playerIdx (the one who actually drinks this round)
+  const loserIdx = calc.drinks.findIndex(d => d > 0);
+
+  for (const phase of phases) {
+    const isMain = phase.label === '本戦' || phase.label === null;
+    if (phase.label) {
+      html += `<div style="font-size:11px; letter-spacing:0.1em; color:var(--gold); margin:8px 0 2px">${phase.label}</div>`;
+    }
+    html += '<div style="margin-bottom:6px">';
+    for (const r of phase.results) {
+      const p = state.players[r.playerIdx];
+      const isWinner = isMain && calc.winners.includes(r.playerIdx);
+      const isFinalLoser = phase.results === state.roundResults && r.playerIdx === loserIdx;
+      let lineStyle = '';
+      let suffix = '';
+      if (isWinner) { lineStyle = 'color:var(--gold); font-weight:700'; suffix = ' ★'; }
+      else if (isFinalLoser) { lineStyle = 'color:#ff8888; font-weight:700'; suffix = ' ✕'; }
+      html += `<div class="roll-line" style="margin:0; padding:4px 0; border-bottom:1px dashed rgba(240,200,80,0.12); ${lineStyle}">
+        ${p.name}：${describeRoll(r.result)}${suffix}
+      </div>`;
+    }
+    html += '</div>';
+  }
   // drinks tally
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
@@ -1713,11 +1857,44 @@ function renderRoster() {
   const a = activeIdx();
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
+    const result = lookupPlayerResult(i);
     const div = document.createElement('div');
-    div.className = 'roster-item' + (i === a ? ' active' : '');
-    div.innerHTML = `<div class="name">${p.name}</div><div class="drinks">${p.totalDrinks}</div>`;
+    let cls = 'roster-item';
+    if (i === a) cls += ' active';
+    if (result) {
+      if (result.type === 'pinzoro' || result.type === 'zorome' || result.type === 'shigoro') cls += ' yaku-strong';
+      else if (result.type === 'hifumi' || result.type === 'menashi') cls += ' yaku-weak';
+    }
+    if (state.isPlayoff) {
+      if (state.rollOrder.includes(i)) cls += ' playoff-in';
+      else cls += ' playoff-out';
+    }
+    div.className = cls;
+    let resultHtml = '';
+    if (result) {
+      resultHtml = `
+        <div class="roll-mini">${result.dice.join('・')}</div>
+        <div class="yaku-mini">${result.label}</div>
+      `;
+    }
+    div.innerHTML = `
+      <div class="name">${p.name}</div>
+      ${resultHtml}
+      <div class="drinks">${p.totalDrinks}</div>
+    `;
     wrap.appendChild(div);
   }
+}
+
+// Look up a player's most recent result (current scope or original).
+function lookupPlayerResult(playerIdx) {
+  const cur = state.roundResults.find(r => r.playerIdx === playerIdx);
+  if (cur) return cur.result;
+  if (state.isPlayoff && state._origResults) {
+    const orig = state._origResults.find(r => r.playerIdx === playerIdx);
+    if (orig) return orig.result;
+  }
+  return null;
 }
 
 function renderTurn() {
@@ -1752,7 +1929,7 @@ function showRules() {
       <dt>進行</dt>
       <dd>1局につき全員が順番に1回ずつ振る。3つの賽子を投げ、目が出るまで最大3回振り直し可（目なし救済）。全員振り終わったら清算。</dd>
       <dt>清算</dt>
-      <dd>その局で<b>一番弱かった一人だけ</b>が飲む。最弱が複数いた場合はランダムで1人。誰かが強い役を出していたら、その役の倍率で飲む。</dd>
+      <dd>その局で<b>一番弱かった一人だけ</b>が飲む。最弱が複数いた場合は<b>決勝戦</b>でその人達だけ振り直して決定。誰かが強い役を出していたら、その役の倍率で飲む（決勝戦で更に強い役が出れば倍率はそちらに更新）。</dd>
       <dt>役の強さ（強→弱）</dt>
       <dd><b>ピンゾロ</b>（1-1-1）… 最強。最弱は <b>5杯</b></dd>
       <dd><b>ゾロ目</b>（同じ目3つ）… 数字大きいほど強い。最弱は <b>3杯</b></dd>

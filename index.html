@@ -1165,9 +1165,15 @@ function animate() {
     if ((settled && elapsed > minTime) || elapsed > 5500) {
       rollState = 'idle';
       const values = diceBodies.map(getDieValue);
+      // any die whose center settled clearly outside the bowl rim = spill
+      const SPILL_R = FLOOR_R + 0.3;
+      const outOfBowl = diceBodies.some(b => {
+        const r2 = b.position.x * b.position.x + b.position.z * b.position.z;
+        return r2 > SPILL_R * SPILL_R;
+      });
       const cb = rollResolve;
       rollResolve = null;
-      if (cb) cb(values);
+      if (cb) cb({ values, outOfBowl });
     }
   }
 }
@@ -1454,6 +1460,7 @@ function startRound() {
   state._origStakeLabel = null;
   state._origWinners = null;
   state._playoffHistory = null;
+  state._spillsThisRound = {};
 
   document.getElementById('round-num').textContent = state.round;
   logEntry(`──── 第${state.round}局 ────`);
@@ -1486,7 +1493,16 @@ async function doRoll() {
   playClatter();
   hideRollLabel();
 
-  const values = await rollPhysicsDice();
+  const { values, outOfBowl } = await rollPhysicsDice();
+
+  if (outOfBowl) {
+    const idx = activeIdx();
+    if (!state._spillsThisRound) state._spillsThisRound = {};
+    state._spillsThisRound[idx] = (state._spillsThisRound[idx] || 0) + 1;
+    vibrate([60, 60, 60]);
+    await showYaku('こぼれた！', '問答無用で +1杯', 'bad');
+  }
+
   state.isRolling = false;
   document.getElementById('btn-roll').disabled = false;
   handleRollResult(evalRoll(values));
@@ -1754,10 +1770,18 @@ function applyRoundDrinks() {
     // Drinks deferred — will be applied after the playoff resolves.
     return;
   }
+  const spills = state._spillsThisRound || {};
   for (let i = 0; i < state.players.length; i++) {
-    const n = state._roundCalc.drinks[i];
-    state.players[i].roundDrinks = n;
-    state.players[i].totalDrinks += n;
+    const calcN = state._roundCalc.drinks[i];
+    const spillN = spills[i] || 0;
+    const total = calcN + spillN;
+    state.players[i].roundDrinks = total;
+    state.players[i].totalDrinks += total;
+    if (spillN > 0) {
+      const existing = state._roundCalc.notes[i];
+      const spillNote = `こぼれ +${spillN}杯`;
+      state._roundCalc.notes[i] = existing ? `${existing} ／ ${spillNote}` : spillNote;
+    }
   }
 }
 
@@ -1930,6 +1954,8 @@ function showRules() {
       <dd>1局につき全員が順番に1回ずつ振る。3つの賽子を投げ、目が出るまで最大3回振り直し可（目なし救済）。全員振り終わったら清算。</dd>
       <dt>清算</dt>
       <dd>その局で<b>一番弱かった一人だけ</b>が飲む。最弱が複数いた場合は<b>決勝戦</b>でその人達だけ振り直して決定。誰かが強い役を出していたら、その役の倍率で飲む（決勝戦で更に強い役が出れば倍率はそちらに更新）。</dd>
+      <dt>こぼし</dt>
+      <dd>サイコロが鉢の外に飛び出したら、その場で<b>問答無用で +1杯</b>。役の判定はそのまま。</dd>
       <dt>役の強さ（強→弱）</dt>
       <dd><b>ピンゾロ</b>（1-1-1）… 最強。最弱は <b>5杯</b></dd>
       <dd><b>ゾロ目</b>（同じ目3つ）… 数字大きいほど強い。最弱は <b>3杯</b></dd>
